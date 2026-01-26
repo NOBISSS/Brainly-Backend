@@ -4,7 +4,7 @@ export interface ILink extends Document{
     createdBy:mongoose.Schema.Types.ObjectId;
     title:string;
     url:string;
-    category:"YOUTUBE" | "TWEET" | "GOOGLE DOCS" | "ARTICLE" | "GENERAL" | "CANVA";//YT,TWEET,DOC
+    category:"YOUTUBE" | "TWEET" | "GOOGLE DOCS" | "GOOGLE SHEET" | "ARTICLE" | "GENERAL" | "CANVA";//YT,TWEET,DOC
     thumbnail:string;
     tags?:string[];
     workspace?:mongoose.Schema.Types.ObjectId | null;
@@ -22,7 +22,7 @@ const linkSchema=new Schema<ILink>({
     category:{
         type:String,
         default:"GENERAL",
-        enum:["YOUTUBE","TWEET","GOOGLE DOCS","ARTICLE","GENERAL","CANVA"]
+        enum:["YOUTUBE","TWEET","GOOGLE DOCS","GOOGLE SHEET","ARTICLE","GENERAL","CANVA"]
     },
     tags:{type:[String],default:[]},
     workspace:{type:Schema.Types.ObjectId,ref:"Workspace",index:true},
