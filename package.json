@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -b && xcopy src\\mail dist\\mail /E /I",
+    
+    "build": "node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc -b && xcopy src\\mail dist\\mail /E /I",
     "start": "node dist/index.js",
     "dev": "tsx --watch src/index.ts"
   },
