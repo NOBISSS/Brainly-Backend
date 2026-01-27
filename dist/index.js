@@ -22,7 +22,7 @@ const allowedOrigins = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
-    "https://second-brainly-lac.vercel.app/"
+    "https://second-brainly-iota.vercel.app/"
 ];
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
