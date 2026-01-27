@@ -55,6 +55,14 @@ export const protect = async (
   }
 };
 
+export const adminOnly = (req, res, next) => {
+  if (req.user?.email !== "parthxcodes@gmail.com") {
+    return res.status(403).json({ message: "Admin only access" });
+  }
+  next();
+};
+
+
 export const logout = async (req: Request, res: Response) => {
   const token = req.headers.authorization?.split(" ")[1] || req.cookies?.accessToken;
 

@@ -9,7 +9,7 @@ import cookieParser from "cookie-parser";
 import userRoutes from "./routes/userRoutes";
 import linkRoutes from "./routes/linkRoutes";
 import workspaceRoutes from "./routes/workspaceRoutes";
-
+import adminRoutes from "./routes/adminRoutes";
 const app=express();
 app.set("trust proxy",1);
 
@@ -18,6 +18,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:5173",
   "http://127.0.0.1:3000",
+  "https://second-brainly-lac.vercel.app/"
 ];
 
 app.use(
@@ -49,6 +50,7 @@ app.use("/health",(_,res)=>{
 //Routes
 console.log("USER ROUTES LOADED");
 app.use("/api/v1/users",userRoutes);
+app.use("/api/v1/admin",adminRoutes);
 app.use("/api/links",linkRoutes);
 app.use("/api/workspaces",workspaceRoutes);
 
