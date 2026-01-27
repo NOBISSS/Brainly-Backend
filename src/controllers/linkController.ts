@@ -11,7 +11,7 @@ import { DEFAULT_THUMBNAIL } from "../constants/constant";
 export const createLink = async (req: Request, res: Response) => {
     try {
         const { title, url, category, tags, workspace } = req.body;
-        const userId = req.user._id;
+        const userId = req.user!._id;
 
         if (workspace) {
             const ws = await Workspace.findOne({
@@ -48,7 +48,7 @@ export const createLink = async (req: Request, res: Response) => {
         }
 
         const link = await Link.create({
-            createdBy: req.user._id,
+            createdBy: req.user!._id,
             title: fetchedTitle || title,
             url,
             category: String(category).toUpperCase(),
@@ -80,7 +80,7 @@ export const createLink = async (req: Request, res: Response) => {
 export const getLinks = async (req: Request, res: Response) => {
     try {
         const { workspaceId } = req.params;
-        const userId = req.user._id;
+        const userId = req.user!._id;
 
         if (!workspaceId) {
             return res.status(400).json({ success: false, message: "Workspace Id is required" });
@@ -117,7 +117,7 @@ export const deleteLink = async (req: Request, res: Response) => {
         if(!mongoose.Types.ObjectId.isValid(id)){
             return res.status(400).json({message:"Invalid Link ID"});
         }
-        const userId = req.user._id;
+        const userId = req.user!._id;
         const link = await Link.findOne({ _id: id, createdBy: userId });
         if (!link) {
             return res.status(404).json({

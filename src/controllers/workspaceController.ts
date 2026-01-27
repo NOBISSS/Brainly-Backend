@@ -1,18 +1,17 @@
-import { Response } from "express";
+import { Request,Response } from "express";
 import Workspace from "../models/workspaceModel";
 import Link from "../models/linkModel";
-import { AuthRequest } from "../middlewares/authMiddleware";
 import User from "../models/userModel";
 import mongoose, { Types } from "mongoose";
 
 //create Workspace
-export const createWorkspace = async (req: AuthRequest, res: Response) => {
+export const createWorkspace = async (req: Request, res: Response) => {
     try {
         const { name, description } = req.body;
         if (!name) return res.status(400).json({ success: false, message: "Name is Required" });
 
         const exists = await Workspace.findOne({
-            owner: req.user._id,
+            owner: req.user!._id,
             name
         })
 
@@ -25,8 +24,8 @@ export const createWorkspace = async (req: AuthRequest, res: Response) => {
         const workspace = await Workspace.create({
             name,
             description,
-            owner: req.user._id,
-            members: [req.user._id]
+            owner: req.user!._id,
+            members: [req.user!._id]
         });
 
         res.status(201).json(
@@ -41,10 +40,10 @@ export const createWorkspace = async (req: AuthRequest, res: Response) => {
 }
 
 //Get All Workspace
-export const getWorkspaces = async (req: AuthRequest, res: Response) => {
+export const getWorkspaces = async (req: Request, res: Response) => {
     try {
         const workspaces = await Workspace.find({
-            $or: [{ owner: req.user._id }, { members: req.user._id }],
+            $or: [{ owner: req.user!._id }, { members: req.user!._id }],
         })
             .populate("owner", "name email")
             .populate("members", "name email")
@@ -56,12 +55,12 @@ export const getWorkspaces = async (req: AuthRequest, res: Response) => {
 }
 
 
-export const getWorkspaceById = async (req: AuthRequest, res: Response) => {
+export const getWorkspaceById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const workspace = await Workspace.findOne({
             _id: id,
-            $or: [{ owner: req.user._id }, { members: req.user._id }],
+            $or: [{ owner: req.user!._id }, { members: req.user!._id }],
         })
             .populate("owner", "name email")
             .populate("members", "name email")
@@ -69,9 +68,9 @@ export const getWorkspaceById = async (req: AuthRequest, res: Response) => {
 
         if (!workspace) return res.status(404).json({ message: "Workspace not found" });
 
-        const isMember = workspace.members.some((m) => m._id.toString() === req.user._id.toString());
+        const isMember = workspace.members.some((m) => m._id.toString() === req.user!._id.toString());
 
-        if (!isMember && workspace.owner.toString() !== req.user._id.toString()) {
+        if (!isMember && workspace.owner.toString() !== req.user!._id.toString()) {
             return res.status(403).json({ success: false, message: "Access Denied" })
         }
 
@@ -82,7 +81,7 @@ export const getWorkspaceById = async (req: AuthRequest, res: Response) => {
 }
 
 //Add Collaborator
-export const addCollaborator = async (req: AuthRequest, res: Response) => {
+export const addCollaborator = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         //const {userId}=req.body;
@@ -90,7 +89,7 @@ export const addCollaborator = async (req: AuthRequest, res: Response) => {
         //Check Wheather particular user is exist on system or not
         const workspace = await Workspace.findById(id);
         if (!workspace) return res.status(404).json({ success: false, message: "Workspace not found" });
-        if (workspace.owner.toString() !== req.user._id.toString()) {
+        if (workspace.owner.toString() !== req.user!._id.toString()) {
             return res.status(403).json({ success: false, message: "Only Owner can Add Members" });
         }
 
@@ -123,7 +122,7 @@ export const addCollaborator = async (req: AuthRequest, res: Response) => {
 };
 
 //Remove Collaborator
-export const removeCollaborator = async (req: AuthRequest, res: Response) => {
+export const removeCollaborator = async (req: Request, res: Response) => {
     try {
         const { id, userId } = req.params;
 
@@ -143,7 +142,7 @@ export const removeCollaborator = async (req: AuthRequest, res: Response) => {
         }
 
         //check that owner id 
-        if (workspace.owner.toString() !== req.user._id.toString())
+        if (workspace.owner.toString() !== req.user!._id.toString())
             return res.status(403).json({ message: "Only Owner Can Remove Collaborator" });
 
         await Workspace.findByIdAndUpdate(
@@ -158,13 +157,13 @@ export const removeCollaborator = async (req: AuthRequest, res: Response) => {
     }
 }
 
-// export const shareWorkspace = async (req: AuthRequest, res: Response) => {
+// export const shareWorkspace = async (req: Request, res: Response) => {
 //     const share = req.body.share;
 
 // }
 
 
-export const deleteWorkspace = async (req: AuthRequest, res: Response) => {
+export const deleteWorkspace = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -177,7 +176,7 @@ export const deleteWorkspace = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    if (workspace.owner.toString() !== req.user._id.toString()) {
+    if (workspace.owner.toString() !== req.user!._id.toString()) {
       return res.status(403).json({
         message: "Only owner can delete workspace",
       });
@@ -199,7 +198,7 @@ export const deleteWorkspace = async (req: AuthRequest, res: Response) => {
 };
 
 
-// export const getUsersWorkspaces=async(req:AuthRequest,res:Response){
+// export const getUsersWorkspaces=async(req:Request,res:Response){
 //     try{
 //         const userId=req.user._id;
 //         const res=await Workspace.find({})

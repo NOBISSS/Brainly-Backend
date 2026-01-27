@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    
     "build": "node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc -b && xcopy src\\mail dist\\mail /E /I",
     "start": "node dist/index.js",
     "dev": "tsx --watch src/index.ts"
@@ -36,14 +35,17 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-oauth2": "^1.8.0",
+    "react": "^19.2.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
     "@types/node": "^24.9.1",
     "@types/nodemailer": "^7.0.4",
     "@types/otp-generator": "^4.0.2",
+    "@types/react": "^19.2.10",
     "ts-node-dev": "^2.0.0"
   }
 }
