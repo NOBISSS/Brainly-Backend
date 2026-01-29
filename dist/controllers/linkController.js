@@ -60,6 +60,9 @@ const createLink = async (req, res) => {
             workspace: workspace || null,
             thumbnail
         });
+        const populatedLink = await linkModel_1.default.findById(link._id)
+            .populate("createdBy", "name avatar email")
+            .lean();
         if (workspace) {
             await workspaceModel_1.default.findByIdAndUpdate(workspace, {
                 $addToSet: {
@@ -67,7 +70,7 @@ const createLink = async (req, res) => {
                 }
             });
         }
-        res.status(201).json({ success: true, message: "Link Created Successfully", data: link });
+        res.status(201).json({ success: true, message: "Link Created Successfully", data: populatedLink });
     }
     catch (error) {
         console.log(error);
