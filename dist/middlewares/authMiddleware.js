@@ -48,7 +48,7 @@ const protect = async (req, res, next) => {
 };
 exports.protect = protect;
 const adminOnly = (req, res, next) => {
-    if (req.user?.email !== "parthxcodes@gmail.com") {
+    if (req.user?.email !== "henry12@gmal.com") {
         return res.status(403).json({ message: "Admin only access" });
     }
     next();

@@ -191,7 +191,7 @@ const deleteWorkspace = async (req, res) => {
         }
         if (workspace.owner.toString() !== req.user._id.toString()) {
             return res.status(403).json({
-                message: "Only owner can delete workspace",
+                message: `Only owner can delete ${workspace.name} workspace`,
             });
         }
         await linkModel_1.default.deleteMany({ workspace: id });

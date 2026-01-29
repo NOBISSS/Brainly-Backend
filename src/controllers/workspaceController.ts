@@ -178,7 +178,7 @@ export const deleteWorkspace = async (req: Request, res: Response) => {
 
     if (workspace.owner.toString() !== req.user!._id.toString()) {
       return res.status(403).json({
-        message: "Only owner can delete workspace",
+        message: `Only owner can delete ${workspace.name} workspace`,
       });
     }
 

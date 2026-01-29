@@ -122,10 +122,17 @@ export const deleteLink = async (req: Request, res: Response) => {
             return res.status(400).json({message:"Invalid Link ID"});
         }
         const userId = req.user!._id;
-        const link = await Link.findOne({ _id: id, createdBy: userId });
+        const link = await Link.findOne({
+  _id: id,
+  $or: [
+    { createdBy: userId },
+    { workspace: { $in: await Workspace.find({ owner: userId }).distinct('_id') } }
+  ]
+});
+
         if (!link) {
             return res.status(404).json({
-                message: "Link not found or Not Owned By You"
+                message: "Link Not Owned By You"
             })
         }
 
