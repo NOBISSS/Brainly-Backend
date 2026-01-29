@@ -5,6 +5,6 @@ import { getAdminStats, healthCheck } from "../controllers/adminController";
 const router = express.Router();
 
 router.get("/health", healthCheck);
-router.get("/stats", protect, getAdminStats);
+router.get("/stats", protect,adminOnly, getAdminStats);
 
 export default router;
