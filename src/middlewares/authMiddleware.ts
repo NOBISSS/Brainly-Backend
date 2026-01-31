@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import redis from "../config/redis";
 import User from "../models/userModel";
 
-
+import { isAdmin } from "../utils/isAdmin";
 
 const JWT_SECRET = process.env.JWT_SECRET || "BRAINLY";
 
@@ -56,7 +56,8 @@ export const protect = async (
 };
 
 export const adminOnly = (req:Request, res:Response, next:NextFunction) => {
-  if (req.user?.email !== "henry12@gmal.com") {
+  //if (req.user?.email !== "henry12@gmal.com") {
+  if(!isAdmin(req.user)){
     return res.status(403).json({ message: "Admin only access" });
   }
   next();

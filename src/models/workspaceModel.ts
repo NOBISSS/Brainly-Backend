@@ -21,7 +21,18 @@ const workspaceSchema=new Schema<IWorkspace>({
 });
 
 workspaceSchema.index({owner:1,createdAt:-1});
+
+workspaceSchema.pre("save", function(next) {
+  if (!this.members.includes(this.owner)) {
+    this.members.push(this.owner);
+  }
+  next();
+});
+
+
+
 workspaceSchema.index({members:1});
 workspaceSchema.index({"links":1});
 
-export default mongoose.model<IWorkspace>("Workspace",workspaceSchema);
+const Workspace = mongoose.model<IWorkspace>("Workspace", workspaceSchema);
+export default Workspace;

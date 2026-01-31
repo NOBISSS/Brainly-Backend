@@ -9,15 +9,23 @@ import {
  } from "../controllers/workspaceController";
 
 import { protect } from "../middlewares/authMiddleware";
+import { workspaceAccess } from "../middlewares/workspaceAccess";
+import { workspaceOwner } from "../middlewares/workspaceOwner";
 
 const router=express.Router();
 
 router.post("/",protect,createWorkspace);
-router.delete("/:id",protect,deleteWorkspace);
+
 router.get("/",protect,getWorkspaces);
-router.get("/:id",protect,getWorkspaceById);
-router.post("/:id/collaborators",protect,addCollaborator);
-router.delete("/:id/collaborators/:userId",protect,removeCollaborator);
+
+router.get("/:id",protect,workspaceAccess,getWorkspaceById);
+
+router.post("/:id/collaborators",protect,workspaceAccess,workspaceOwner,addCollaborator);
+
+router.delete("/:id/collaborators/:userId",protect,workspaceAccess,workspaceOwner,removeCollaborator);
+
+router.delete("/:id",protect,workspaceAccess,workspaceOwner,deleteWorkspace);
+
 
 export default router;
 

@@ -7,6 +7,7 @@ exports.logout = exports.adminOnly = exports.protect = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const redis_1 = __importDefault(require("../config/redis"));
 const userModel_1 = __importDefault(require("../models/userModel"));
+const isAdmin_1 = require("../utils/isAdmin");
 const JWT_SECRET = process.env.JWT_SECRET || "BRAINLY";
 const protect = async (req, res, next) => {
     let token;
@@ -48,7 +49,8 @@ const protect = async (req, res, next) => {
 };
 exports.protect = protect;
 const adminOnly = (req, res, next) => {
-    if (req.user?.email !== "henry12@gmal.com") {
+    //if (req.user?.email !== "henry12@gmal.com") {
+    if (!(0, isAdmin_1.isAdmin)(req.user)) {
         return res.status(403).json({ message: "Admin only access" });
     }
     next();

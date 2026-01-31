@@ -13,6 +13,8 @@ export const createLink = async (req: Request, res: Response) => {
         const { title, url, category, tags, workspace } = req.body;
         const userId = req.user!._id;
 
+        const exists=await Link.find();
+
         if (workspace) {
             const ws = await Workspace.findOne({
                 _id: workspace,

@@ -1,3 +1,5 @@
+//TODO:"typeRoots": ["./node_modules/@types", "./types"]
+
 {
   "compilerOptions": {
     "rootDir": "./src",

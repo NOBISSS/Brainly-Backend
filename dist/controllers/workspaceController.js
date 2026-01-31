@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -40,7 +7,6 @@ exports.deleteWorkspace = exports.removeCollaborator = exports.addCollaborator =
 const workspaceModel_1 = __importDefault(require("../models/workspaceModel"));
 const linkModel_1 = __importDefault(require("../models/linkModel"));
 const userModel_1 = __importDefault(require("../models/userModel"));
-const mongoose_1 = __importStar(require("mongoose"));
 //create Workspace
 const createWorkspace = async (req, res) => {
     try {
@@ -89,123 +55,198 @@ const getWorkspaces = async (req, res) => {
     }
 };
 exports.getWorkspaces = getWorkspaces;
+//old
+// export const getWorkspaceById = async (req: Request, res: Response) => {
+//     try {
+//         const { id } = req.params;
+//         const workspace = await Workspace.findOne({
+//             _id: id,
+//             $or: [{ owner: req.user!._id }, { members: req.user!._id }],
+//         })
+//             .populate("owner", "name email")
+//             .populate("members", "name email")
+//             .populate("links");
+//         if (!workspace) return res.status(404).json({ message: "Workspace not found" });
+//         const isMember = workspace.members.some((m) => m._id.toString() === req.user!._id.toString());
+//         if (!isMember && workspace.owner.toString() !== req.user!._id.toString()) {
+//             return res.status(403).json({ success: false, message: "Access Denied" })
+//         }
+//         res.status(200).json({ success: true, data: workspace })
+//     } catch (error) {
+//         res.status(500).json({ message: "Error Fetching Workspaces", error })
+//     }
+// }
+//Add Collaborator
+//updated
 const getWorkspaceById = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const workspace = await workspaceModel_1.default.findOne({
-            _id: id,
-            $or: [{ owner: req.user._id }, { members: req.user._id }],
-        })
-            .populate("owner", "name email")
-            .populate("members", "name email")
-            .populate("links");
-        if (!workspace)
-            return res.status(404).json({ message: "Workspace not found" });
-        const isMember = workspace.members.some((m) => m._id.toString() === req.user._id.toString());
-        if (!isMember && workspace.owner.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ success: false, message: "Access Denied" });
-        }
-        res.status(200).json({ success: true, data: workspace });
-    }
-    catch (error) {
-        res.status(500).json({ message: "Error Fetching Workspaces", error });
-    }
+    res.json({
+        success: true,
+        data: req.workspace
+    });
 };
 exports.getWorkspaceById = getWorkspaceById;
-//Add Collaborator
+//old
+// export const addCollaborator = async (req: Request, res: Response) => {
+//     try {
+//         const { id } = req.params;
+//         //const {userId}=req.body;
+//         const { email } = req.body;
+//         //Check Wheather particular user is exist on system or not
+//         const workspace = await Workspace.findById(id);
+//         if (!workspace) return res.status(404).json({ success: false, message: "Workspace not found" });
+//         if (workspace.owner.toString() !== req.user!._id.toString()) {
+//             return res.status(403).json({ success: false, message: "Only Owner can Add Members" });
+//         }
+//         const user = await User.findOne({ email: email.toLowerCase() })
+//         if (!user) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "User not Found"
+//             })
+//         }
+//         const isMember = workspace.members.some((m) => m.toString() === user._id.toString());
+//         if (isMember) {
+//             return res.status(400).json({ success: false, message: "User Already in Workspace" });
+//         }
+//         workspace.members.push(user._id as Types.ObjectId);
+//         await workspace.save();
+//         res.status(200).json({ success: true, message: "Collaborator Added", data: workspace });
+//     } catch (error) {
+//         res.status(500).json({
+//             message: "Failed to Add Member in workspace",
+//             error
+//         })
+//     }
+// };
+//Remove Collaborator
+//updated
 const addCollaborator = async (req, res) => {
     try {
-        const { id } = req.params;
-        //const {userId}=req.body;
+        const workspace = req.workspace; // 🔥 from middleware
         const { email } = req.body;
-        //Check Wheather particular user is exist on system or not
-        const workspace = await workspaceModel_1.default.findById(id);
-        if (!workspace)
-            return res.status(404).json({ success: false, message: "Workspace not found" });
-        if (workspace.owner.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ success: false, message: "Only Owner can Add Members" });
-        }
         const user = await userModel_1.default.findOne({ email: email.toLowerCase() });
         if (!user) {
             return res.status(404).json({
                 success: false,
-                message: "User not Found"
+                message: "User not found",
             });
         }
         const isMember = workspace.members.some((m) => m.toString() === user._id.toString());
         if (isMember) {
-            return res.status(400).json({ success: false, message: "User Already in Workspace" });
+            return res.status(400).json({
+                success: false,
+                message: "User already in workspace",
+            });
         }
         workspace.members.push(user._id);
         await workspace.save();
-        res.status(200).json({ success: true, message: "Collaborator Added", data: workspace });
+        res.json({
+            success: true,
+            message: "Collaborator added",
+            data: workspace,
+        });
     }
     catch (error) {
-        res.status(500).json({
-            message: "Failed to Add Member in workspace",
-            error
-        });
+        res.status(500).json({ error });
     }
 };
 exports.addCollaborator = addCollaborator;
-//Remove Collaborator
+//old
+// export const removeCollaborator = async (req: Request, res: Response) => {
+//     try {
+//         const { id, userId } = req.params;
+//         if (!mongoose.Types.ObjectId.isValid(id)) {
+//             return res.status(400).json({ message: "Invalid Workspace ID" });
+//         }
+//         const workspace = await Workspace.findById(id);
+//         if (!workspace) return res.status(404).json({
+//             message: "Workspace Not Found"
+//         })
+//         if (userId === workspace.owner.toString()) {
+//             return res.status(400).json({
+//                 message: "Owner Cannot be Removed",
+//             })
+//         }
+//         //check that owner id 
+//         if (workspace.owner.toString() !== req.user!._id.toString())
+//             return res.status(403).json({ message: "Only Owner Can Remove Collaborator" });
+//         await Workspace.findByIdAndUpdate(
+//             id,
+//             { $addToSet: { members: userId } }
+//         );
+//         res.status(200).json({ success: true, message: "Collaborator Removed", data: workspace });
+//     } catch (error) {
+//         res.status(500).json({ message: "Failed to remove Collaborator", error })
+//     }
+// }
+//new
 const removeCollaborator = async (req, res) => {
     try {
-        const { id, userId } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "Invalid Workspace ID" });
-        }
-        const workspace = await workspaceModel_1.default.findById(id);
-        if (!workspace)
-            return res.status(404).json({
-                message: "Workspace Not Found"
-            });
+        const workspace = req.workspace;
+        const { userId } = req.params;
         if (userId === workspace.owner.toString()) {
             return res.status(400).json({
-                message: "Owner Cannot be Removed",
+                message: "Owner cannot be removed",
             });
         }
-        //check that owner id 
-        if (workspace.owner.toString() !== req.user._id.toString())
-            return res.status(403).json({ message: "Only Owner Can Remove Collaborator" });
-        await workspaceModel_1.default.findByIdAndUpdate(id, { $addToSet: { members: userId } });
-        res.status(200).json({ success: true, message: "Collaborator Removed", data: workspace });
+        workspace.members = workspace.members.filter((m) => m.toString() !== userId);
+        await workspace.save();
+        res.json({
+            success: true,
+            message: "Collaborator removed",
+            data: workspace,
+        });
     }
     catch (error) {
-        res.status(500).json({ message: "Failed to remove Collaborator", error });
+        res.status(500).json({ error });
     }
 };
 exports.removeCollaborator = removeCollaborator;
 // export const shareWorkspace = async (req: Request, res: Response) => {
 //     const share = req.body.share;
 // }
+//old
+// export const deleteWorkspace = async (req: Request, res: Response) => {
+//   try {
+//     const { id } = req.params;
+//     if (!Types.ObjectId.isValid(id)) {
+//       return res.status(400).json({ message: "Invalid workspace ID" });
+//     }
+//     const workspace = await Workspace.findById(id);
+//     if (!workspace) {
+//       return res.status(404).json({ message: "Workspace not found" });
+//     }
+//     if (workspace.owner.toString() !== req.user!._id.toString()) {
+//       return res.status(403).json({
+//         message: `Only owner can delete ${workspace.name} workspace`,
+//       });
+//     }
+//     await Link.deleteMany({ workspace: id });
+//     await Workspace.findByIdAndDelete(id);
+//     res.status(200).json({
+//       success: true,
+//       message: "Workspace deleted successfully",
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       message: "Failed to delete workspace",
+//       error,
+//     });
+//   }
+// };
+//new
 const deleteWorkspace = async (req, res) => {
     try {
-        const { id } = req.params;
-        if (!mongoose_1.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "Invalid workspace ID" });
-        }
-        const workspace = await workspaceModel_1.default.findById(id);
-        if (!workspace) {
-            return res.status(404).json({ message: "Workspace not found" });
-        }
-        if (workspace.owner.toString() !== req.user._id.toString()) {
-            return res.status(403).json({
-                message: `Only owner can delete ${workspace.name} workspace`,
-            });
-        }
-        await linkModel_1.default.deleteMany({ workspace: id });
-        await workspaceModel_1.default.findByIdAndDelete(id);
-        res.status(200).json({
+        const workspace = req.workspace;
+        await linkModel_1.default.deleteMany({ workspace: workspace._id });
+        await workspace.deleteOne();
+        res.json({
             success: true,
             message: "Workspace deleted successfully",
         });
     }
     catch (error) {
-        res.status(500).json({
-            message: "Failed to delete workspace",
-            error,
-        });
+        res.status(500).json({ error });
     }
 };
 exports.deleteWorkspace = deleteWorkspace;

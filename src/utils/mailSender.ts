@@ -9,8 +9,8 @@ interface emailProps {
     body: string;
 }
 
-const MAIL_USER = process.env.MAIL_USER;
-const MAIL_PASS = process.env.MAIL_PASS;
+//const MAIL_USER = process.env.MAIL_USER;
+//const MAIL_PASS = process.env.MAIL_PASS;
 export const mailSender = async ({ email, title, body }: emailProps) => {
     try {
         const transporter = nodemailer.createTransport({
@@ -19,8 +19,8 @@ export const mailSender = async ({ email, title, body }: emailProps) => {
             // secure: false,
             service: "gmail",
             auth: {
-                user: MAIL_USER,
-                pass: MAIL_PASS
+                user: process.env.MAIL_USER,
+                pass: process.env.MAIL_PASS
             }
         })
 

@@ -16,6 +16,7 @@ const createLink = async (req, res) => {
     try {
         const { title, url, category, tags, workspace } = req.body;
         const userId = req.user._id;
+        const exists = await linkModel_1.default.find();
         if (workspace) {
             const ws = await workspaceModel_1.default.findOne({
                 _id: workspace,
