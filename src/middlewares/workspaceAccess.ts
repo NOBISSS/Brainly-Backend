@@ -8,7 +8,6 @@ export const workspaceAccess = async (
   next: NextFunction
 ) => {
   try {
-    console.log("ENTERED");
     const user = req.user!;
 
     // workspace id can come from params or body
@@ -19,7 +18,7 @@ export const workspaceAccess = async (
 
     const workspace=await Workspace.findById(workspaceId)
     .populate("owner","name email")
-    .populate("memebers","name email");
+    .populate("members","name email");
       
     if (!workspace){
         return res.status(404).json({message:"Workspace not found"})

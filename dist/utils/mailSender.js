@@ -25,7 +25,7 @@ const mailSender = async ({ email, title, body }) => {
             subject: `${title}`,
             html: `${body}`
         });
-        console.log("TRANSPORTER:", transporter, "\n info:", info);
+        //console.log("TRANSPORTER:",transporter,"\n info:",info);
         return info;
     }
     catch (error) {

@@ -8,7 +8,6 @@ const workspaceModel_1 = __importDefault(require("../models/workspaceModel"));
 const isAdmin_1 = require("../utils/isAdmin");
 const workspaceAccess = async (req, res, next) => {
     try {
-        console.log("ENTERED");
         const user = req.user;
         // workspace id can come from params or body
         const workspaceId = req.params.id ||
@@ -16,7 +15,7 @@ const workspaceAccess = async (req, res, next) => {
             req.body.workspace;
         const workspace = await workspaceModel_1.default.findById(workspaceId)
             .populate("owner", "name email")
-            .populate("memebers", "name email");
+            .populate("members", "name email");
         if (!workspace) {
             return res.status(404).json({ message: "Workspace not found" });
         }

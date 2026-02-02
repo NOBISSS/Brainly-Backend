@@ -8,7 +8,7 @@ export const workspaceOwner = (
 ) => {
   const user = req.user!;
   const workspace = req.workspace;
-
+  console.log("WORKSPACE ::",workspace);
   if (!workspace) {
     return res.status(500).json({ message: "Workspace not attached" });
   }
@@ -16,7 +16,7 @@ export const workspaceOwner = (
   // admin bypass
   if (isAdmin(user)) return next();
 
-  if (workspace.owner.toString() !== user._id.toString()) {
+  if (workspace.owner._id.toString() !== user._id.toString()) {
     return res.status(403).json({
       message: "Only owner allowed",
     });

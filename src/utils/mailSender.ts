@@ -30,7 +30,7 @@ export const mailSender = async ({ email, title, body }: emailProps) => {
             subject: `${title}`,
             html: `${body}`
         })
-        console.log("TRANSPORTER:",transporter,"\n info:",info);
+        //console.log("TRANSPORTER:",transporter,"\n info:",info);
         return info;
     } catch (error: any) {
         console.log("Error occured while sending mail to user", error);

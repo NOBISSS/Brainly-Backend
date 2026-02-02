@@ -214,28 +214,52 @@ export const removeCollaborator = async (req: Request, res: Response) => {
   try {
     const workspace = req.workspace!;
     const { userId } = req.params;
+    const requesterId = req.user!._id.toString();
 
-    if (userId === workspace.owner.toString()) {
+    // ========================
+    // 1. only owner can remove
+    // ========================
+    if (workspace.owner._id.toString() !== requesterId) {
+      return res.status(403).json({
+        success: false,
+        message: "Only owner can remove collaborators",
+      });
+    }
+
+    // ========================
+    // 2. owner cannot remove self
+    // ========================
+    if (workspace.owner.toString() === userId) {
       return res.status(400).json({
+        success: false,
         message: "Owner cannot be removed",
       });
     }
 
-    workspace.members = workspace.members.filter(
-      (m: any) => m.toString() !== userId
+    // ========================
+    // 3. atomic DB removal (FAST)
+    // ========================
+    await Workspace.updateOne(
+      { _id: workspace._id },
+      { $pull: { members: userId } }
     );
 
-    await workspace.save();
-
-    res.json({
+    return res.json({
       success: true,
-      message: "Collaborator removed",
-      data: workspace,
+      message: "Collaborator removed successfully",
+      data:workspace
     });
-  } catch (error) {
-    res.status(500).json({ error });
+
+  } catch (error: any) {
+    console.error("Remove collaborator error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to remove collaborator",
+    });
   }
 };
+
 
 
 // export const shareWorkspace = async (req: Request, res: Response) => {

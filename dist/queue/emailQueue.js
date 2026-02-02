@@ -21,7 +21,6 @@ new bullmq_1.Worker("email-queue", async (job) => {
     const { email, otp } = job.data;
     const html = (0, otpTemplate_1.otpTemp)(otp);
     await (0, mailSender_1.mailSender)({ email, title: "Your Brainly OTP Code", body: html });
-    console.log(`OTP email sent to ${email}`);
 }, {
     connection: redis_1.default,
     concurrency: 10

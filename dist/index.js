@@ -50,7 +50,6 @@ app.use("/health", (_, res) => {
     res.status(200).json({ status: "Ok" });
 });
 //Routes
-console.log("USER ROUTES LOADED");
 app.use("/api/v1/users", userRoutes_1.default);
 app.use("/api/v1/admin", adminRoutes_1.default);
 app.use("/api/links", linkRoutes_1.default);

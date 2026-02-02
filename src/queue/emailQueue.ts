@@ -19,7 +19,7 @@ new Worker(
         const {email,otp}=job.data;
         const html=otpTemp(otp);
         await mailSender({email,title:"Your Brainly OTP Code",body:html});
-        console.log(`OTP email sent to ${email}`);
+        
     },
     {
         connection:redis,

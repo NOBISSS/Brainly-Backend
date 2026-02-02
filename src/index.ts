@@ -54,7 +54,6 @@ app.use("/health",(_,res)=>{
 })
 
 //Routes
-console.log("USER ROUTES LOADED");
 app.use("/api/v1/users",userRoutes);
 app.use("/api/v1/admin",adminRoutes);
 app.use("/api/links",linkRoutes);

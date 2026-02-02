@@ -21,7 +21,6 @@ router.get("/preview", async (req, res) => {
             timeout: 3000,
             onlyGetOpenGraphInfo: true,
         });
-        console.log("URL FROM OG::", result.ogImage?.[0]?.url);
         let thumbnail = result.ogImage?.[0]?.url || (0, getPlantformThumbnail_1.getPlatformThumbnail)(String(url)) || (0, getFavicon_1.getFavicon)(String(url)) || constant_1.DEFAULT_THUMBNAIL;
         return res.json({
             title: result.ogTitle || "",
