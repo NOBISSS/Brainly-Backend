@@ -12,6 +12,7 @@ const sendTelegramMessage = async (message) => {
             text: message,
             parse_mode: "HTML"
         });
+        console.log("MESSAGE SEND SUCCSSFULLY");
     }
     catch (error) {
         console.log("TELEGRAM FAILED:", error.message);

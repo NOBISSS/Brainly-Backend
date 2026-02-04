@@ -10,6 +10,7 @@ export const sendTelegramMessage=async(message:string):Promise<void>=>{
                 parse_mode:"HTML"
             }
         );
+        console.log("MESSAGE SEND SUCCSSFULLY");
     }catch(error:any){
         console.log("TELEGRAM FAILED:",error.message);
     }
