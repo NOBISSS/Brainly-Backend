@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.io = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const express_1 = __importDefault(require("express"));
@@ -11,6 +12,8 @@ const db_1 = require("./config/db");
 require("./queue/emailQueue");
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 //Routers
+const http_1 = __importDefault(require("http"));
+const socket_io_1 = require("socket.io");
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const linkRoutes_1 = __importDefault(require("./routes/linkRoutes"));
 const workspaceRoutes_1 = __importDefault(require("./routes/workspaceRoutes"));
@@ -54,11 +57,34 @@ app.use("/api/v1/users", userRoutes_1.default);
 app.use("/api/v1/admin", adminRoutes_1.default);
 app.use("/api/links", linkRoutes_1.default);
 app.use("/api/workspaces", workspaceRoutes_1.default);
+const httpServer = http_1.default.createServer(app);
+exports.io = new socket_io_1.Server(httpServer, {
+    cors: {
+        origin: allowedOrigins,
+        credentials: true,
+    }
+});
+exports.io.on("connection", (socket) => {
+    console.log("🟢 socket connected:", socket.id);
+    socket.on("joinWorkspace", (workspaceId) => {
+        socket.join(workspaceId);
+        console.log(`Joined room ${workspaceId}`);
+    });
+    socket.on("joinUser", (userId) => {
+        socket.join(userId);
+    });
+    socket.on("disconnect", () => {
+        console.log("🔴 socket disconnected:", socket.id);
+    });
+});
 const PORT = process.env.PORT || 3000;
 async function startServer() {
     await (0, db_1.connectDB)();
     //await connectRedis();
-    const server = app.listen(PORT, () => {
+    // const server = app.listen(PORT, () => {
+    //   console.log(`🚀 Server running on PORT ${PORT}`);
+    // });
+    const server = httpServer.listen(PORT, () => {
         console.log(`🚀 Server running on PORT ${PORT}`);
     });
     const shutdown = () => {

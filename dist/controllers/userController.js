@@ -13,6 +13,7 @@ const axios_1 = __importDefault(require("axios"));
 const redis_1 = __importDefault(require("../config/redis"));
 const constant_1 = require("../constants/constant");
 const hashOtp_1 = require("../utils/hashOtp");
+const telegram_1 = require("../utils/telegram");
 const sendOTP = async (req, res) => {
     try {
         const { email } = req.body;
@@ -133,6 +134,10 @@ const registerUser = async (req, res) => {
         const user = await userModel_1.default.create({ name, email: email.toLowerCase(), password, gender });
         await redis_1.default.del(`otp:${email}`);
         const token = (0, generateToken_1.GenerateToken)(user._id.toString());
+        (0, telegram_1.sendTelegramMessage)(`🎉 <b>New User Registered</b>
+Name: ${user.name}
+Email: ${user.email}
+`);
         return res.status(201).json({
             success: true,
             message: "User Registered Successfully",
@@ -169,6 +174,10 @@ const loginUser = async (req, res) => {
             secure: true,
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
+        (0, telegram_1.sendTelegramMessage)(`🎉 <b>New User Logged</b>
+Name: ${user.name}
+Email: ${user.email}
+`);
         //success/failure response
         return res.json({
             success: true,

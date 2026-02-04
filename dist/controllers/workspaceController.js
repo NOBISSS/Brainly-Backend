@@ -7,6 +7,7 @@ exports.deleteWorkspace = exports.removeCollaborator = exports.addCollaborator =
 const workspaceModel_1 = __importDefault(require("../models/workspaceModel"));
 const linkModel_1 = __importDefault(require("../models/linkModel"));
 const userModel_1 = __importDefault(require("../models/userModel"));
+const telegram_1 = require("../utils/telegram");
 //create Workspace
 const createWorkspace = async (req, res) => {
     try {
@@ -28,6 +29,13 @@ const createWorkspace = async (req, res) => {
             owner: req.user._id,
             members: [req.user._id]
         });
+        (0, telegram_1.sendTelegramMessage)(`📂 <b>New Workspace Created</b>
+<b>Name:</b> ${workspace.name}
+<b>Owner:</b> ${req.user.email}
+<b>Members:</b> ${workspace.members.length}
+`);
+        // send only to owner initially
+        // io.to(workspace.owner._id.toString()).emit("workspaceCreated", workspace);
         res.status(201).json({
             success: true,
             message: "Workspace Created",
@@ -55,28 +63,6 @@ const getWorkspaces = async (req, res) => {
     }
 };
 exports.getWorkspaces = getWorkspaces;
-//old
-// export const getWorkspaceById = async (req: Request, res: Response) => {
-//     try {
-//         const { id } = req.params;
-//         const workspace = await Workspace.findOne({
-//             _id: id,
-//             $or: [{ owner: req.user!._id }, { members: req.user!._id }],
-//         })
-//             .populate("owner", "name email")
-//             .populate("members", "name email")
-//             .populate("links");
-//         if (!workspace) return res.status(404).json({ message: "Workspace not found" });
-//         const isMember = workspace.members.some((m) => m._id.toString() === req.user!._id.toString());
-//         if (!isMember && workspace.owner.toString() !== req.user!._id.toString()) {
-//             return res.status(403).json({ success: false, message: "Access Denied" })
-//         }
-//         res.status(200).json({ success: true, data: workspace })
-//     } catch (error) {
-//         res.status(500).json({ message: "Error Fetching Workspaces", error })
-//     }
-// }
-//Add Collaborator
 //updated
 const getWorkspaceById = async (req, res) => {
     res.json({
@@ -85,40 +71,6 @@ const getWorkspaceById = async (req, res) => {
     });
 };
 exports.getWorkspaceById = getWorkspaceById;
-//old
-// export const addCollaborator = async (req: Request, res: Response) => {
-//     try {
-//         const { id } = req.params;
-//         //const {userId}=req.body;
-//         const { email } = req.body;
-//         //Check Wheather particular user is exist on system or not
-//         const workspace = await Workspace.findById(id);
-//         if (!workspace) return res.status(404).json({ success: false, message: "Workspace not found" });
-//         if (workspace.owner.toString() !== req.user!._id.toString()) {
-//             return res.status(403).json({ success: false, message: "Only Owner can Add Members" });
-//         }
-//         const user = await User.findOne({ email: email.toLowerCase() })
-//         if (!user) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "User not Found"
-//             })
-//         }
-//         const isMember = workspace.members.some((m) => m.toString() === user._id.toString());
-//         if (isMember) {
-//             return res.status(400).json({ success: false, message: "User Already in Workspace" });
-//         }
-//         workspace.members.push(user._id as Types.ObjectId);
-//         await workspace.save();
-//         res.status(200).json({ success: true, message: "Collaborator Added", data: workspace });
-//     } catch (error) {
-//         res.status(500).json({
-//             message: "Failed to Add Member in workspace",
-//             error
-//         })
-//     }
-// };
-//Remove Collaborator
 //updated
 const addCollaborator = async (req, res) => {
     try {
@@ -140,6 +92,8 @@ const addCollaborator = async (req, res) => {
         }
         workspace.members.push(user._id);
         await workspace.save();
+        //  io.to(workspace._id.toString()).emit("memberAdded",user);
+        // console.log("EMITTING memberAdded to room:", workspace._id.toString());
         res.json({
             success: true,
             message: "Collaborator added",
@@ -151,62 +105,26 @@ const addCollaborator = async (req, res) => {
     }
 };
 exports.addCollaborator = addCollaborator;
-//old
-// export const removeCollaborator = async (req: Request, res: Response) => {
-//     try {
-//         const { id, userId } = req.params;
-//         if (!mongoose.Types.ObjectId.isValid(id)) {
-//             return res.status(400).json({ message: "Invalid Workspace ID" });
-//         }
-//         const workspace = await Workspace.findById(id);
-//         if (!workspace) return res.status(404).json({
-//             message: "Workspace Not Found"
-//         })
-//         if (userId === workspace.owner.toString()) {
-//             return res.status(400).json({
-//                 message: "Owner Cannot be Removed",
-//             })
-//         }
-//         //check that owner id 
-//         if (workspace.owner.toString() !== req.user!._id.toString())
-//             return res.status(403).json({ message: "Only Owner Can Remove Collaborator" });
-//         await Workspace.findByIdAndUpdate(
-//             id,
-//             { $addToSet: { members: userId } }
-//         );
-//         res.status(200).json({ success: true, message: "Collaborator Removed", data: workspace });
-//     } catch (error) {
-//         res.status(500).json({ message: "Failed to remove Collaborator", error })
-//     }
-// }
 //new
 const removeCollaborator = async (req, res) => {
     try {
         const workspace = req.workspace;
         const { userId } = req.params;
         const requesterId = req.user._id.toString();
-        // ========================
-        // 1. only owner can remove
-        // ========================
         if (workspace.owner._id.toString() !== requesterId) {
             return res.status(403).json({
                 success: false,
                 message: "Only owner can remove collaborators",
             });
         }
-        // ========================
-        // 2. owner cannot remove self
-        // ========================
         if (workspace.owner.toString() === userId) {
             return res.status(400).json({
                 success: false,
                 message: "Owner cannot be removed",
             });
         }
-        // ========================
-        // 3. atomic DB removal (FAST)
-        // ========================
         await workspaceModel_1.default.updateOne({ _id: workspace._id }, { $pull: { members: userId } });
+        // io.to(workspace._id.toString()).emit("memberRemoved",user);
         return res.json({
             success: true,
             message: "Collaborator removed successfully",
@@ -222,42 +140,11 @@ const removeCollaborator = async (req, res) => {
     }
 };
 exports.removeCollaborator = removeCollaborator;
-// export const shareWorkspace = async (req: Request, res: Response) => {
-//     const share = req.body.share;
-// }
-//old
-// export const deleteWorkspace = async (req: Request, res: Response) => {
-//   try {
-//     const { id } = req.params;
-//     if (!Types.ObjectId.isValid(id)) {
-//       return res.status(400).json({ message: "Invalid workspace ID" });
-//     }
-//     const workspace = await Workspace.findById(id);
-//     if (!workspace) {
-//       return res.status(404).json({ message: "Workspace not found" });
-//     }
-//     if (workspace.owner.toString() !== req.user!._id.toString()) {
-//       return res.status(403).json({
-//         message: `Only owner can delete ${workspace.name} workspace`,
-//       });
-//     }
-//     await Link.deleteMany({ workspace: id });
-//     await Workspace.findByIdAndDelete(id);
-//     res.status(200).json({
-//       success: true,
-//       message: "Workspace deleted successfully",
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       message: "Failed to delete workspace",
-//       error,
-//     });
-//   }
-// };
 //new
 const deleteWorkspace = async (req, res) => {
     try {
         const workspace = req.workspace;
+        //io.emit("workspaceDeleted", workspace._id);
         await linkModel_1.default.deleteMany({ workspace: workspace._id });
         await workspace.deleteOne();
         res.json({
@@ -270,14 +157,3 @@ const deleteWorkspace = async (req, res) => {
     }
 };
 exports.deleteWorkspace = deleteWorkspace;
-// export const getUsersWorkspaces=async(req:Request,res:Response){
-//     try{
-//         const userId=req.user._id;
-//         const res=await Workspace.find({})
-//     }catch(error){
-//         res.status(500).json({
-//             success:false,
-//             message:"Failed to fetch Users Workspaces"
-//         })
-//     }
-// }
