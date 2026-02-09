@@ -3,6 +3,8 @@ import { registerUser,loginUser,getProfile, sendOTP } from "../controllers/userC
 import { protect } from "../middlewares/authMiddleware";
 //import passport from "passport";
 import { ensureAuthenticated } from "../middlewares/ensureAuthenticated";
+import { sendContact } from "../controllers/contactController";
+import { contactLimiter } from "../middlewares/rateLimiter";
 
 const router=express.Router();
 
@@ -23,5 +25,5 @@ router.post("/register",registerUser);
 
 router.post("/login",loginUser);
 router.get("/profile",protect,getProfile)
-
+router.post("/contact",contactLimiter,sendContact);
 export default router;
