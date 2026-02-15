@@ -208,8 +208,6 @@ export const loginUser = async (req: Request, res: Response) => {
 Name: ${user.name}
 Email: ${user.email}
 `);
-
-
         //success/failure response
         return res.json({
             success: true,
@@ -229,4 +227,77 @@ Email: ${user.email}
 //Get Current User Profile
 export const getProfile = async (req: Request, res: Response) => {
     return res.json({ success: true, data: req.user });
+}
+
+export const forgotPassword = async (req: Request, res: Response) => {
+    try {
+        const { email,otp,newPassword, confirmPassword } = req.body;
+        if (!email || !otp || !newPassword || !confirmPassword){
+            return res.status(400).json({
+                success:false,
+                message:"All Fields are required",
+            });  
+        }
+
+        if(newPassword!==confirmPassword){
+                return res.status(400).json({
+                    success:false,
+                    message:"Passwords do not matched"
+                });
+        }
+
+        const user=await User.findOne({email:email.toLowerCase()}).select("+password");
+
+        if(!user){
+            return res.status(404).json({
+                success:false,
+                message:'User NOt Found'
+            });
+        }
+
+        const otpKey=`otp:${email}`;
+        const attemptKey=`otp_attempts:${email}`;
+
+        const storedHashedOtp=await redis.get(otpKey);
+
+        if(!storedHashedOtp){
+            return res.status(400).json({
+                success:false,
+                message:"OTP Expired or Not Found"
+            });
+        }
+
+        const attempts=await redis.incr(attemptKey);
+
+        if(attempts===1){
+            await redis.expire(attemptKey,5*60);
+        }
+
+        if(attempts>5){
+            await redis.del(otpKey);
+            await redis.del(attemptKey);
+            return res.status(429).json({
+                success:false,
+                message:'Too many Attempts.OTP invalidated';
+            });
+        }
+
+        const hashedInputOtp=hashOtp(otp);
+        if(storedHashedOtp!== hashedInputOtp){
+            return res.status(400).json({
+                success:false,
+                message:"Invalid OTP"
+            });
+        }
+
+        user.password=newPassword;
+        await user.save();
+    } catch (error) {
+        console.log("Got error in ForgotPassword API:", error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error'
+            error
+        })
+    }
 }
