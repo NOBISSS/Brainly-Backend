@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getProfile = exports.loginUser = exports.registerUser = exports.googleSignin = exports.sendOTP = void 0;
+exports.resetPassword = exports.getProfile = exports.loginUser = exports.registerUser = exports.googleSignin = exports.verifyOTP = exports.sendOTP = void 0;
 const userModel_1 = __importDefault(require("../models/userModel"));
 const generateToken_1 = require("../utils/generateToken");
 const otp_generator_1 = __importDefault(require("otp-generator"));
@@ -12,11 +12,12 @@ const OAuth2Client_1 = require("../config/OAuth2Client");
 const axios_1 = __importDefault(require("axios"));
 const redis_1 = __importDefault(require("../config/redis"));
 const constant_1 = require("../constants/constant");
+const crypto_1 = __importDefault(require("crypto"));
 const hashOtp_1 = require("../utils/hashOtp");
 const telegram_1 = require("../utils/telegram");
 const sendOTP = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, type = "register" } = req.body;
         if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
             return res.status(400).json({
                 success: false,
@@ -34,11 +35,21 @@ const sendOTP = async (req, res) => {
         }
         //checking existance
         const existingUser = await userModel_1.default.findOne({ email });
-        if (existingUser) {
-            return res.status(401).json({
-                success: false,
-                message: "User Already Registered"
-            });
+        if (type === "register") {
+            if (existingUser) {
+                return res.status(401).json({
+                    success: false,
+                    message: "User Already Registered"
+                });
+            }
+        }
+        if (type === "forgot") {
+            if (!existingUser) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User Not Found",
+                });
+            }
         }
         //sending otp here
         let otp = otp_generator_1.default.generate(6, { upperCaseAlphabets: false, lowerCaseAlphabets: false, specialChars: false });
@@ -61,6 +72,53 @@ const sendOTP = async (req, res) => {
     }
 };
 exports.sendOTP = sendOTP;
+const verifyOTP = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Email and OTP are required"
+            });
+        }
+        const otpKey = `otp:${email}`;
+        const attemptsKey = `otp_attempts:${email}`;
+        const storedHashedOtp = await redis_1.default.get(otpKey);
+        if (!storedHashedOtp) {
+            return res.status(400).json({
+                success: false,
+                message: "OTP expired or not found"
+            });
+        }
+        const hashedIncomingOtp = (0, hashOtp_1.hashOtp)(otp);
+        if (hashedIncomingOtp !== storedHashedOtp) {
+            // increment attempts
+            await redis_1.default.incr(attemptsKey);
+            return res.status(400).json({
+                success: false,
+                message: "Invalid OTP"
+            });
+        }
+        // OTP is correct → delete it
+        await redis_1.default.del(otpKey);
+        await redis_1.default.del(attemptsKey);
+        const resetToken = crypto_1.default.randomUUID();
+        await redis_1.default.set(`reset:${email}`, resetToken, "EX", 600);
+        res.status(200).json({
+            success: true,
+            message: "OTP Verified Successfully",
+            resetToken
+        });
+    }
+    catch (error) {
+        console.log("Verify OTP Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to verify OTP"
+        });
+    }
+};
+exports.verifyOTP = verifyOTP;
 //google sign in
 const googleSignin = async (req, res) => {
     try {
@@ -159,7 +217,7 @@ const loginUser = async (req, res) => {
         if (!email || !password)
             return res.status(400).json({ success: false, message: "All Fields are required" });
         //Verify
-        const user = await userModel_1.default.findOne({ email: email.toLowerCase() });
+        const user = await userModel_1.default.findOne({ email: email.toLowerCase() }).select("+password");
         if (!user || !(await user.comparePassword(password))) {
             return res.status(401).json({
                 success: false,
@@ -200,3 +258,51 @@ const getProfile = async (req, res) => {
     return res.json({ success: true, data: req.user });
 };
 exports.getProfile = getProfile;
+const resetPassword = async (req, res) => {
+    try {
+        const { email, newPassword, confirmPassword, resetToken } = req.body;
+        if (!email || !newPassword || !confirmPassword || !resetToken) {
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required",
+            });
+        }
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Passwords do not match",
+            });
+        }
+        // 🔥 VERIFY RESET TOKEN (NOT OTP)
+        const storedToken = await redis_1.default.get(`reset:${email}`);
+        if (!storedToken || storedToken !== resetToken) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired reset session",
+            });
+        }
+        const user = await userModel_1.default.findOne({ email: email.toLowerCase() }).select("+password");
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+        user.password = newPassword;
+        await user.save();
+        // 🔥 delete reset session
+        await redis_1.default.del(`reset:${email}`);
+        return res.status(200).json({
+            success: true,
+            message: "Password reset successfully",
+        });
+    }
+    catch (error) {
+        console.log("Reset Password Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+exports.resetPassword = resetPassword;

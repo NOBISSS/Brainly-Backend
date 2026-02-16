@@ -20,7 +20,7 @@ const userSchema = new mongoose_1.Schema({
         trim: true,
         index: true
     },
-    password: { type: String, required: true, minLength: 6 },
+    password: { type: String, required: true, minLength: 6, select: false },
     avatar: {
         type: String,
         default: function () {

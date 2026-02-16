@@ -1,5 +1,5 @@
 import express from "express";
-import { registerUser,loginUser,getProfile, sendOTP } from "../controllers/userController";
+import { registerUser,loginUser,getProfile, sendOTP, verifyOTP, resetPassword } from "../controllers/userController";
 import { protect } from "../middlewares/authMiddleware";
 //import passport from "passport";
 import { ensureAuthenticated } from "../middlewares/ensureAuthenticated";
@@ -16,6 +16,8 @@ router.get("/test", (req, res) => {
 
 router.post("/sendotp",sendOTP);
 router.post("/register",registerUser);  
+router.post("/verify-otp",verifyOTP);  
+router.post("/reset-password",resetPassword);  
 // router.get('/auth/google',passport.authenticate('google',{scope:['profile','email']}));
 
 // router.get('/auth/google/callback',passport.authenticate('google',{failureRedirect:'/'}),(req,res)=>{

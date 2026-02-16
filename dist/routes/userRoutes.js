@@ -14,6 +14,8 @@ router.get("/test", (req, res) => {
 });
 router.post("/sendotp", userController_1.sendOTP);
 router.post("/register", userController_1.registerUser);
+router.post("/verify-otp", userController_1.verifyOTP);
+router.post("/reset-password", userController_1.resetPassword);
 // router.get('/auth/google',passport.authenticate('google',{scope:['profile','email']}));
 // router.get('/auth/google/callback',passport.authenticate('google',{failureRedirect:'/'}),(req,res)=>{
 //     res.redirect('/');
