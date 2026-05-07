@@ -13,7 +13,7 @@ export const createLink = async (req: Request, res: Response) => {
         const { title, url, category, tags, workspace } = req.body;
         const userId = req.user!._id;
 
-        const exists=await Link.find();
+        //const exists=await Link.find();
 
         if (workspace) {
             const ws = await Workspace.findOne({
@@ -69,8 +69,10 @@ export const createLink = async (req: Request, res: Response) => {
                     links: link._id
                 }
             })
+        
+        const {io}=await import("../index");
+        io.to(workspace).emit("link:new",populatedLink);
         }
-
         res.status(201).json({ success: true, message: "Link Created Successfully", data: populatedLink });
     } catch (error: any) {
         console.log(error);

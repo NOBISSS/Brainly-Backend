@@ -91,7 +91,7 @@ async function startServer() {
         console.log("Gracefully Shutting Down...");
         server.close(() => process.exit(0));
     };
-    process.on("SIGTERM", () => shutdown);
-    process.on("SIGINT", () => shutdown);
+    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);
 }
 startServer();

@@ -4,7 +4,7 @@ import Link from "../models/linkModel";
 import User from "../models/userModel";
 import mongoose, { Types } from "mongoose";
 import { sendTelegramMessage } from "../utils/telegram";
-import { io } from "../index";
+
 //create Workspace
 export const createWorkspace = async (req: Request, res: Response) => {
     try {
@@ -37,7 +37,8 @@ sendTelegramMessage(`📂 <b>New Workspace Created</b>
 
 // send only to owner initially
 // io.to(workspace.owner._id.toString()).emit("workspaceCreated", workspace);
-
+    const {io}=await import("../index");
+    io.to(String(req.user?._id)).emit("workspace:new",workspace);
 
         res.status(201).json(
             {
@@ -163,9 +164,10 @@ export const removeCollaborator = async (req: Request, res: Response) => {
 //new
 export const deleteWorkspace = async (req: Request, res: Response) => {
   try {
-    const workspace = req.workspace!;
+    const workspace:any = req.workspace!;
 
-    //io.emit("workspaceDeleted", workspace._id);
+    const {io}=await import("../index");
+    io.to(workspace._id.toString()).emit("workspace:deleted",workspace._id.toString())
 
     await Link.deleteMany({ workspace: workspace._id });
     await workspace.deleteOne();

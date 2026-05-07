@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -36,6 +69,8 @@ const createWorkspace = async (req, res) => {
 `);
         // send only to owner initially
         // io.to(workspace.owner._id.toString()).emit("workspaceCreated", workspace);
+        const { io } = await Promise.resolve().then(() => __importStar(require("../index")));
+        io.to(String(req.user?._id)).emit("workspace:new", workspace);
         res.status(201).json({
             success: true,
             message: "Workspace Created",
@@ -144,7 +179,8 @@ exports.removeCollaborator = removeCollaborator;
 const deleteWorkspace = async (req, res) => {
     try {
         const workspace = req.workspace;
-        //io.emit("workspaceDeleted", workspace._id);
+        const { io } = await Promise.resolve().then(() => __importStar(require("../index")));
+        io.to(workspace._id.toString()).emit("workspace:deleted", workspace._id.toString());
         await linkModel_1.default.deleteMany({ workspace: workspace._id });
         await workspace.deleteOne();
         res.json({
