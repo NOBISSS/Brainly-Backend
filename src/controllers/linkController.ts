@@ -13,7 +13,29 @@ export const createLink = async (req: Request, res: Response) => {
         const { title, url, category, tags, workspace } = req.body;
         const userId = req.user!._id;
 
+
+        if (!url || !category) {
+            return res.status(400).json({ message: "URL and Category are required" });
+        }
+
+        try { new URL(url); } catch { return res.status(400).json({ success: false, message: "Invalid URL" }) };
+
+
+        const workspaceId=workspace ?new mongoose.Types.ObjectId(workspace) : null;
         //const exists=await Link.find();
+
+        const duplicate = await Link.findOne({
+            url,
+            createdBy: new mongoose.Types.ObjectId(userId),
+            workspace: workspaceId || null,
+        });
+
+        if (duplicate) {
+            return res.status(409).json({
+                success: false,
+                message: "You've already saved this link in this workspace"
+            });
+        }
 
         if (workspace) {
             const ws = await Workspace.findOne({
@@ -29,21 +51,31 @@ export const createLink = async (req: Request, res: Response) => {
             }
         }
 
-        if (!url || !category) {
-            return res.status(400).json({ message: "URL and Category are required" });
+        
+        const recentDuplicate = await Link.findOne({
+            url,
+            workspace: workspace || null,
+            createdAt: { $gte: new Date(Date.now() - 10000) }
+        })
+        console.log(recentDuplicate);
+        if (recentDuplicate) {
+            return res.status(409).json({
+                success: false,
+                message: "Link already Being Created,Please Wait"
+            })
         }
 
-        try { new URL(url); } catch { return res.status(400).json({ success: false, message: "Invalid URL" }) };
+        
 
         let thumbnail = DEFAULT_THUMBNAIL;
         let fetchedTitle = title;
 
         try {
-            const { result } = await ogs({ url, timeout: 3000,onlyGetOpenGraphInfo:true });
+            const { result } = await ogs({ url, timeout: 3000, onlyGetOpenGraphInfo: true });
             if (result.success) {
-                thumbnail = result.ogImage?.[0]?.url || getPlatformThumbnail(url) || getFavicon(url) ||DEFAULT_THUMBNAIL;
-                fetchedTitle =result.ogTitle ||fetchedTitle;
-                console.log("FETCHED TITLE:::",fetchedTitle)
+                thumbnail = result.ogImage?.[0]?.url || getPlatformThumbnail(url) || getFavicon(url) || DEFAULT_THUMBNAIL;
+                fetchedTitle = result.ogTitle || fetchedTitle;
+                console.log("FETCHED TITLE:::", fetchedTitle)
             }
         } catch (error) {
             console.log("OG Fetch Failed for:", url);
@@ -54,14 +86,14 @@ export const createLink = async (req: Request, res: Response) => {
             title: fetchedTitle || title,
             url,
             category: String(category).toUpperCase(),
-            tags:Array.isArray(tags)?tags:[],
+            tags: Array.isArray(tags) ? tags : [],
             workspace: workspace || null,
             thumbnail
         });
 
         const populatedLink = await Link.findById(link._id)
-  .populate("createdBy", "name avatar email")
-  .lean();
+            .populate("createdBy", "name avatar email")
+            .lean();
 
         if (workspace) {
             await Workspace.findByIdAndUpdate(workspace, {
@@ -69,9 +101,9 @@ export const createLink = async (req: Request, res: Response) => {
                     links: link._id
                 }
             })
-        
-        const {io}=await import("../index");
-        io.to(workspace).emit("link:new",populatedLink);
+
+            const { io } = await import("../index");
+            io.to(workspace).emit("link:new", populatedLink);
         }
         res.status(201).json({ success: true, message: "Link Created Successfully", data: populatedLink });
     } catch (error: any) {
@@ -104,7 +136,7 @@ export const getLinks = async (req: Request, res: Response) => {
         }
 
         const links = await Link.find({ workspace: workspaceId })
-            .populate("createdBy","name avatar")
+            .populate("createdBy", "name avatar")
             .sort({ createdAt: -1 })
             .lean();
 
@@ -120,19 +152,19 @@ export const getLinks = async (req: Request, res: Response) => {
 
 export const deleteLink = async (req: Request, res: Response) => {
     try {
-        
+
         const { id } = req.params;
-        if(!mongoose.Types.ObjectId.isValid(id)){
-            return res.status(400).json({message:"Invalid Link ID"});
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid Link ID" });
         }
         const userId = req.user!._id;
         const link = await Link.findOne({
-  _id: id,
-  $or: [
-    { createdBy: userId },
-    { workspace: { $in: await Workspace.find({ owner: userId }).distinct('_id') } }
-  ]
-});
+            _id: id,
+            $or: [
+                { createdBy: userId },
+                { workspace: { $in: await Workspace.find({ owner: userId }).distinct('_id') } }
+            ]
+        });
 
         if (!link) {
             return res.status(404).json({

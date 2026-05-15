@@ -54,4 +54,5 @@ linkSchema.index({ user: 1, createdAt: -1 });
 linkSchema.index({ workspace: 1 });
 linkSchema.index({ tags: 1 });
 linkSchema.index({ user: 1, url: 1 }, { unique: true });
+linkSchema.index({ url: 1, createdBy: 1, workspace: 1 }, { unique: true });
 exports.default = mongoose_1.default.model("Link", linkSchema);

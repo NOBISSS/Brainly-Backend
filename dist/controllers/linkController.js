@@ -49,7 +49,29 @@ const createLink = async (req, res) => {
     try {
         const { title, url, category, tags, workspace } = req.body;
         const userId = req.user._id;
+        if (!url || !category) {
+            return res.status(400).json({ message: "URL and Category are required" });
+        }
+        try {
+            new URL(url);
+        }
+        catch {
+            return res.status(400).json({ success: false, message: "Invalid URL" });
+        }
+        ;
+        const workspaceId = workspace ? new mongoose_1.default.Types.ObjectId(workspace) : null;
         //const exists=await Link.find();
+        const duplicate = await linkModel_1.default.findOne({
+            url,
+            createdBy: new mongoose_1.default.Types.ObjectId(userId),
+            workspace: workspaceId || null,
+        });
+        if (duplicate) {
+            return res.status(409).json({
+                success: false,
+                message: "You've already saved this link in this workspace"
+            });
+        }
         if (workspace) {
             const ws = await workspaceModel_1.default.findOne({
                 _id: workspace,
@@ -62,16 +84,18 @@ const createLink = async (req, res) => {
                 });
             }
         }
-        if (!url || !category) {
-            return res.status(400).json({ message: "URL and Category are required" });
+        const recentDuplicate = await linkModel_1.default.findOne({
+            url,
+            workspace: workspace || null,
+            createdAt: { $gte: new Date(Date.now() - 10000) }
+        });
+        console.log(recentDuplicate);
+        if (recentDuplicate) {
+            return res.status(409).json({
+                success: false,
+                message: "Link already Being Created,Please Wait"
+            });
         }
-        try {
-            new URL(url);
-        }
-        catch {
-            return res.status(400).json({ success: false, message: "Invalid URL" });
-        }
-        ;
         let thumbnail = constant_1.DEFAULT_THUMBNAIL;
         let fetchedTitle = title;
         try {
