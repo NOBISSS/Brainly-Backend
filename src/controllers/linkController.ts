@@ -1,46 +1,73 @@
-import { Request, Response } from "express"
+import { Request, Response } from "express";
 import Link from "../models/linkModel";
-import Workspace from "../models/workspaceModel"
+import Workspace from "../models/workspaceModel";
 import ogs from "open-graph-scraper";
 import mongoose from "mongoose";
+
 import { getPlatformThumbnail } from "../utils/getPlantformThumbnail";
 import { getFavicon } from "../utils/getFavicon";
 import { DEFAULT_THUMBNAIL } from "../constants/constant";
 
-//CREATE LINK
-export const createLink = async (req: Request, res: Response) => {
+import { io } from "../index";
+
+export const createLink = async (
+    req: Request,
+    res: Response
+) => {
     try {
-        const { title, url, category, tags, workspace } = req.body;
+        const {
+            title,
+            url,
+            category,
+            tags,
+            workspace,
+        } = req.body;
+
         const userId = req.user!._id;
 
-
         if (!url || !category) {
-            return res.status(400).json({ message: "URL and Category are required" });
-        }
-
-        try { new URL(url); } catch { return res.status(400).json({ success: false, message: "Invalid URL" }) };
-
-
-        const workspaceId=workspace ?new mongoose.Types.ObjectId(workspace) : null;
-        //const exists=await Link.find();
-
-        const duplicate = await Link.findOne({
-            url,
-            createdBy: new mongoose.Types.ObjectId(userId),
-            workspace: workspaceId || null,
-        });
-
-        if (duplicate) {
-            return res.status(409).json({
+            return res.status(400).json({
                 success: false,
-                message: "You've already saved this link in this workspace"
+                message: "URL and Category are required",
             });
         }
 
+        try {
+            new URL(url);
+        } catch {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid URL",
+            });
+        }
+
+        let workspaceId:
+            | mongoose.Types.ObjectId
+            | null = null;
+
         if (workspace) {
+            if (
+                !mongoose.Types.ObjectId.isValid(
+                    workspace
+                )
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid Workspace ID",
+                });
+            }
+
+            workspaceId =
+                new mongoose.Types.ObjectId(workspace);
+        }
+
+        if (workspaceId) {
             const ws = await Workspace.findOne({
-                _id: workspace,
-                $or: [{ owner: userId }, { members: userId }],
+                _id: workspaceId,
+                $or: [
+                    { owner: userId },
+                    { members: userId },
+                ],
             });
 
             if (!ws) {
@@ -51,173 +78,292 @@ export const createLink = async (req: Request, res: Response) => {
             }
         }
 
-        
+        const duplicate = await Link.findOne({
+            url,
+            createdBy: userId,
+            workspace: workspaceId || null,
+        });
+
+        if (duplicate) {
+            return res.status(409).json({
+                success: false,
+                message:
+                    "You've already saved this link in this workspace",
+            });
+        }
+
         const recentDuplicate = await Link.findOne({
             url,
-            workspace: workspace || null,
-            createdAt: { $gte: new Date(Date.now() - 10000) }
-        })
-        console.log(recentDuplicate);
+            workspace: workspaceId || null,
+            createdAt: {
+                $gte: new Date(
+                    Date.now() - 10000
+                ),
+            },
+        });
+
         if (recentDuplicate) {
             return res.status(409).json({
                 success: false,
-                message: "Link already Being Created,Please Wait"
-            })
+                message:
+                    "Link is already being created. Please wait.",
+            });
         }
-
-        
 
         let thumbnail = DEFAULT_THUMBNAIL;
         let fetchedTitle = title;
 
         try {
-            const { result } = await ogs({ url, timeout: 3000, onlyGetOpenGraphInfo: true });
+            const { result } = await ogs({
+                url,
+                timeout: 3000,
+                onlyGetOpenGraphInfo: true,
+            });
+
             if (result.success) {
-                thumbnail = result.ogImage?.[0]?.url || getPlatformThumbnail(url) || getFavicon(url) || DEFAULT_THUMBNAIL;
-                fetchedTitle = result.ogTitle || fetchedTitle;
-                console.log("FETCHED TITLE:::", fetchedTitle)
+                thumbnail =
+                    result.ogImage?.[0]?.url ||
+                    getPlatformThumbnail(url) ||
+                    getFavicon(url) ||
+                    DEFAULT_THUMBNAIL;
+
+                fetchedTitle =
+                    result.ogTitle ||
+                    fetchedTitle;
             }
         } catch (error) {
-            console.log("OG Fetch Failed for:", url);
+            console.log(
+                "OG Fetch Failed:",
+                url
+            );
         }
 
         const link = await Link.create({
-            createdBy: req.user!._id,
-            title: fetchedTitle || title,
+            createdBy: userId,
+            title:
+                fetchedTitle ||
+                title ||
+                "Untitled",
             url,
-            category: String(category).toUpperCase(),
-            tags: Array.isArray(tags) ? tags : [],
-            workspace: workspace || null,
-            thumbnail
+            category:
+                String(category).toUpperCase(),
+            tags: Array.isArray(tags)
+                ? tags
+                : [],
+            workspace: workspaceId || null,
+            thumbnail,
         });
 
-        const populatedLink = await Link.findById(link._id)
-            .populate("createdBy", "name avatar email")
-            .lean();
+        const populatedLink =
+            await Link.findById(link._id)
+                .populate(
+                    "createdBy",
+                    "name avatar email"
+                )
+                .lean();
 
-        if (workspace) {
-            await Workspace.findByIdAndUpdate(workspace, {
-                $addToSet: {
-                    links: link._id
+        if (workspaceId) {
+            await Workspace.findByIdAndUpdate(
+                workspaceId,
+                {
+                    $addToSet: {
+                        links: link._id,
+                    },
                 }
-            })
+            );
 
-            const { io } = await import("../index");
-            io.to(workspace).emit("link:new", populatedLink);
+            io.to(workspaceId.toString()).emit(
+                "link:new",
+                populatedLink
+            );
         }
-        res.status(201).json({ success: true, message: "Link Created Successfully", data: populatedLink });
+
+        return res.status(201).json({
+            success: true,
+            message: "Link Created Successfully",
+            data: populatedLink,
+        });
     } catch (error: any) {
-        console.log(error);
+        console.error(
+            "CREATE LINK ERROR:",
+            error
+        );
+
         return res.status(500).json({
             success: false,
-            message: "Error Occured While Creating Link",
-            error: error.message || error
-        })
+            message:
+                "Error Occurred While Creating Link",
+            error:
+                error?.message ||
+                error,
+        });
     }
-}
+};
 
-//GET LINK
-export const getLinks = async (req: Request, res: Response) => {
+export const getLinks = async (
+    req: Request,
+    res: Response
+) => {
     try {
         const { workspaceId } = req.params;
         const userId = req.user!._id;
 
         if (!workspaceId) {
-            return res.status(400).json({ success: false, message: "Workspace Id is required" });
+            return res.status(400).json({
+                success: false,
+                message: "Workspace ID is required",
+            });
         }
 
-        const workspace = await Workspace.findOne({
-            _id: workspaceId,
-            $or: [{ owner: userId }, { members: userId }]
-        });
+        if (
+            !mongoose.Types.ObjectId.isValid(
+                workspaceId
+            )
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Workspace ID",
+            });
+        }
+
+        const workspace =
+            await Workspace.findOne({
+                _id: workspaceId,
+                $or: [
+                    { owner: userId },
+                    { members: userId },
+                ],
+            });
 
         if (!workspace) {
-            return res.status(404).json({ success: false, message: "Access Denied Or Workspace not found" });
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Access denied or workspace not found",
+            });
         }
 
-        const links = await Link.find({ workspace: workspaceId })
-            .populate("createdBy", "name avatar")
-            .sort({ createdAt: -1 })
+        const links = await Link.find({
+            workspace: workspaceId,
+        })
+            .populate(
+                "createdBy",
+                "name avatar"
+            )
+            .sort({
+                createdAt: -1,
+            })
             .lean();
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             count: links.length,
-            data: links
+            data: links,
         });
-    } catch (err) {
-        res.status(500).json({ success: false, message: "Error Fetching Links", error: err })
+    } catch (error: any) {
+        console.error(
+            "GET LINKS ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Error Fetching Links",
+            error:
+                error?.message ||
+                error,
+        });
     }
-}
+};
 
-export const deleteLink = async (req: Request, res: Response) => {
+export const deleteLink = async (
+    req: Request,
+    res: Response
+) => {
     try {
-
         const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "Invalid Link ID" });
+
+        if (
+            !mongoose.Types.ObjectId.isValid(id)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Link ID",
+            });
         }
+
         const userId = req.user!._id;
+
+        const ownedWorkspaceIds =
+            await Workspace.find({
+                owner: userId,
+            }).distinct("_id");
+
         const link = await Link.findOne({
             _id: id,
             $or: [
                 { createdBy: userId },
-                { workspace: { $in: await Workspace.find({ owner: userId }).distinct('_id') } }
-            ]
+                {
+                    workspace: {
+                        $in: ownedWorkspaceIds,
+                    },
+                },
+            ],
         });
 
         if (!link) {
             return res.status(404).json({
-                message: "Link Not Owned By You"
-            })
+                success: false,
+                message: "Link not owned by you",
+            });
         }
 
-        if (link.workspace) {
-            await Workspace.findByIdAndUpdate(link.workspace, { $pull: { links: link._id } });
+        const workspaceId =
+            link.workspace?.toString();
+
+        if (workspaceId) {
+            await Workspace.findByIdAndUpdate(
+                workspaceId,
+                {
+                    $pull: {
+                        links: link._id,
+                    },
+                }
+            );
         }
 
         await Link.findByIdAndDelete(id);
+
+        if (workspaceId) {
+            io.to(workspaceId).emit(
+                "link:deleted",
+                {
+                    linkId: id,
+                }
+            );
+        }
+
         return res.status(200).json({
             success: true,
-            message: "Link deleted Successfully",
-        })
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Failed to Delete Link Content",
+            message:
+                "Link deleted successfully",
+            data: {
+                linkId: id,
+            },
+        });
+    } catch (error: any) {
+        console.error(
+            "DELETE LINK ERROR:",
             error
-        })
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Failed to Delete Link Content",
+            error:
+                error?.message ||
+                error,
+        });
     }
-}
-
-
-// export const moveLinkToWorkspace = async (req: Request, res: Response) => {
-//     try {
-//         const { linkId, workspaceId } = req.body;
-//         const userId=req.user._id;
-
-//         const link = await Link.findOne({_id:linkId,user:userId});
-//         if (!link) return res.status(404).json({success:false, message: "Link not Found" });
-//         //check permission
-//         const targetWorkspace=await Workspace.findOne({
-//             _id:workspaceId,
-//             $or:[{owner:userId},{member:userId}]
-//         })
-//         if(!targetWorkspace) return res.status(403).json({success:false,message:"No Access to move this link"});
-
-//         if(link.workspace){
-//             await Workspace.findByIdAndUpdate(link.workspace,{$pull:{links:link._id}});
-//         }
-
-//         link.workspace=workspaceId;
-//         await link.save();
-
-//         await Workspace.findByIdAndUpdate(workspaceId,{$push:{link._id}});
-
-//         res.status(200).json({success:true, message: "Link Moved Successfully",data:link });
-//     } catch (error) {
-//         res.status(500).json({ message: "Failed to Move Link", error })
-//     }
-// }
-
-
+};
